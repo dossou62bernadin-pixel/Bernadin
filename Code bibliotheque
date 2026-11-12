@@ -1,0 +1,188 @@
+include <vector>
+#include <limits>
+
+using namespace std;
+
+class Livre {
+private:
+    int id;
+    string titre, auteur;
+    int anneePublication;
+    bool disponible;
+    friend class Bibliotheque;
+public:
+    Livre(int i, string t, string a, int annee) {
+        id = i; titre = t; auteur = a; anneePublication = annee; disponible = true;
+    }
+    int getId() const { return id; }
+    string getTitre() const { return titre; }
+    string getAuteur() const { return auteur; }
+    int getAnneePublication() const { return anneePublication; }
+    bool estDisponible() const { return disponible; }
+};
+
+class Etudiant {
+private:
+    string matricule, nom, prenom, email;
+public:
+    Etudiant(string m, string n, string p, string e) {
+        matricule = m; nom = n; prenom = p; email = e;
+    }
+    string getMatricule() const { return matricule; }
+    string getNom() const { return nom; }
+    string getPrenom() const { return prenom; }
+    string getEmail() const { return email; }
+};
+
+class Emprunt {
+private:
+    int idLivre;
+    string matriculeEtudiant;
+    bool actif;
+    friend class Bibliotheque;
+public:
+    Emprunt(int id, string matricule) {
+        idLivre = id; matriculeEtudiant = matricule; actif = true;
+    }
+    int getIdLivre() const { return idLivre; }
+    string getMatriculeEtudiant() const { return matriculeEtudiant; }
+    bool estActif() const { return actif; }
+};
+
+class Bibliotheque {
+private:
+    vector<Livre> livres;
+    vector<Etudiant> etudiants;
+    vector<Emprunt> emprunts;
+
+    int indiceLivre(int id) const {
+        unsigned int i;
+        for (i = 0; i < livres.size(); i++)
+            if (livres[i].getId() == id) return (int)i;
+        return -1;
+    }
+    bool etudiantExiste(string matricule) const {
+        unsigned int i;
+        for (i = 0; i < etudiants.size(); i++)
+            if (etudiants[i].getMatricule() == matricule) return true;
+        return false;
+    }
+public:
+    void ajouterLivre(Livre livre) {
+        if (indiceLivre(livre.getId()) >= 0) {
+            cout << "Cet identifiant de livre existe deja." << endl;
+            return;
+        }
+        livres.push_back(livre);
+        cout << "Livre ajoute." << endl;
+    }
+    void ajouterEtudiant(Etudiant etudiant) {
+        if (etudiantExiste(etudiant.getMatricule())) {
+            cout << "Ce matricule existe deja." << endl;
+            return;
+        }
+        etudiants.push_back(etudiant);
+        cout << "Etudiant ajoute." << endl;
+    }
+    bool emprunter(int id, string matricule) {
+        int index = indiceLivre(id);
+        if (index < 0) {
+            cout << "Livre introuvable." << endl;
+            return false;
+        }
+        if (!etudiantExiste(matricule)) {
+            cout << "Etudiant introuvable." << endl;
+            return false;
+        }
+        if (!livres[index].disponible) {
+            cout << "Ce livre est deja emprunte." << endl;
+            return false;
+        }
+        livres[index].disponible = false;
+        emprunts.push_back(Emprunt(id, matricule));
+        cout << "Emprunt enregistre." << endl;
+        return true;
+    }
+    bool retourner(int id) {
+        int index = indiceLivre(id);
+        if (index < 0) {
+            cout << "Livre introuvable." << endl;
+            return false;
+        }
+        if (livres[index].disponible) {
+            cout << "Ce livre n'est pas emprunte." << endl;
+            return false;
+        }
+        unsigned int i;
+        for (i = 0; i < emprunts.size(); i++) {
+            if (emprunts[i].idLivre == id && emprunts[i].actif) {
+                emprunts[i].actif = false;
+                livres[index].disponible = true;
+                cout << "Retour enregistre." << endl;
+                return true;
+            }
+        }
+        cout << "Erreur : emprunt actif introuvable." << endl;
+        return false;
+    }
+    void afficherLivres() const {
+        unsigned int i;
+        cout << "\nCatalogue :" << endl;
+        for (i = 0; i < livres.size(); i++) {
+            cout << "ID " << livres[i].getId() << " | " << livres[i].getTitre()
+                 << " - " << livres[i].getAuteur() << " ("
+                 << livres[i].getAnneePublication() << ") | ";
+            if (livres[i].estDisponible()) cout << "Disponible";
+            else cout << "Emprunte";
+            cout << endl;
+        }
+    }
+};
+
+int main() {
+    Bibliotheque bibliotheque;
+    bibliotheque.ajouterEtudiant(Etudiant("ETU001", "Diallo", "Amina", "amina@example.edu"));
+    bibliotheque.ajouterEtudiant(Etudiant("ETU002", "Ndiaye", "Moussa", "moussa@example.edu"));
+    bibliotheque.ajouterLivre(Livre(101, "Les Miserables", "Victor Hugo", 1862));
+    bibliotheque.ajouterLivre(Livre(102, "L Etranger", "Albert Camus", 1942));
+
+    int choix = -1;
+    while (choix != 0) {
+        cout << "\n=== Bibliotheque universitaire ===" << endl
+             << "1. Afficher les livres" << endl
+             << "2. Emprunter un livre" << endl
+             << "3. Retourner un livre" << endl
+             << "0. Quitter" << endl << "Votre choix : ";
+        if (!(cin >> choix)) {
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << "Saisie invalide." << endl;
+            continue;
+        }
+        if (choix == 1) {
+            bibliotheque.afficherLivres();
+        } else if (choix == 2) {
+            int id;
+            string matricule;
+            cout << "Identifiant du livre : ";
+            if (!(cin >> id)) {
+                cin.clear(); cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                cout << "Identifiant invalide." << endl; continue;
+            }
+            cout << "Matricule de l'etudiant : "; cin >> matricule;
+            bibliotheque.emprunter(id, matricule);
+        } else if (choix == 3) {
+            int id;
+            cout << "Identifiant du livre a retourner : ";
+            if (!(cin >> id)) {
+                cin.clear(); cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                cout << "Identifiant invalide." << endl; continue;
+            }
+            bibliotheque.retourner(id);
+        } else if (choix != 0) {
+            cout << "Choix inconnu." << endl;
+        }
+    }
+    cout << "Fin du programme." << endl;
+    return 0;
+}
